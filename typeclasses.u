@@ -1,0 +1,52 @@
+use .base.List uncons
+use .base.Optional None Some
+use .base Nat List Request Text
+
+ability Monoid a where
+  mempty : a
+  mappend : a -> a -> a
+
+concat : [a] -> {Monoid a} a
+concat xs = case uncons xs of
+                None -> Monoid.mempty
+                Some (x, xs) -> Monoid.mappend x (concat xs)
+
+natPlusMonoid : Request (Monoid Nat) a -> a
+natPlusMonoid x = case x of
+  {Monoid.mempty -> c} -> handle natPlusMonoid in c 0
+  {Monoid.mappend x y -> c} -> handle natPlusMonoid in c (x + y)
+  {x} -> x
+
+stringMonoid : Request (Monoid Text) b -> b
+stringMonoid x = case x of
+  {Monoid.mempty -> c} -> handle stringMonoid in c ""
+  {Monoid.mappend x xs -> c} -> handle stringMonoid in c (x ++ xs)
+  {x} -> x
+
+natPlusMonoidExample =
+  handle natPlusMonoid in
+  -- concat [1,2,3,4]
+  mappend 3 (mappend 1 2)
+
+> natPlusMonoidExample
+
+stringMonoidExample =
+  handle stringMonoid in
+  concat ["a", "b", "c"]
+  --  mappend "a" "b"
+
+> stringMonoidExample
+
+ability Functor f where
+  fmap : (a -> b) -> f a -> f b
+
+listFunctor : Request (Functor List) a -> a
+listFunctor x = case x of
+  {Functor.fmap f x -> c} -> handle listFunctor in c (map f x)
+  {x} -> x
+
+functorExample _ =
+  handle listFunctor in
+  (x -> x + 1) `fmap` [1, 2, 3, 4]
+
+> functorExample ()
